@@ -37,6 +37,7 @@ app.get("/posts", (req, res) => {
   res.json(postList);
 });
 
+// RESTful: endpoints
 app.post("/posts", (req, res) => {
   const newPost = createPost({
     title: "second post",
