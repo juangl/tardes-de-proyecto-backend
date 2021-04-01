@@ -2,29 +2,49 @@ const express = require("express");
 const app = express();
 const port = 3000;
 
-const posts = [
-  {
-    title: "first post",
+let idCount = 0;
+const postIds = [];
+
+function createPost(postData) {
+  let currentId = ++idCount;
+  postIds.push(currentId);
+
+  return {
+    id: currentId,
     created_at: new Date(),
-    body: "here's the content",
-  },
-];
+    // spread operator
+    ...postData,
+  };
+}
 
-// main route
-app.get("/posts", (req, res) => {
-
-  res.json(posts);
-
+const firstPost = createPost({
+  title: 'first post',
+  body: 'this is the content',
 });
 
-app.get("/posts/create", (req, res) => {
-  const newPost = {
-    title: "second post",
-    created_at: new Date(),
-    body: "here's the content",
-  };
+const posts = {
+  // computed key ES6
+  [firstPost.id]: firstPost,
+};
 
-  posts.push(newPost);
+// collection of posts
+app.get("/posts", (req, res) => {
+  // map transforms an array like: [1, 2, 3] => [1, 4, 9]
+  // [1, 2, 3] => [{id: ...}, {id: ...}, { id: ...}]
+  // Object.values(posts); // [{}, {}, {}]; does something similar but with no
+  // order guaranteed
+  const postList = postIds.map((postId) => posts[postId]);
+  res.json(postList);
+});
+
+// RESTful: endpoints
+app.post("/posts", (req, res) => {
+  const newPost = createPost({
+    title: "second post",
+    body: "here's the content",
+  });
+
+  posts[newPost.id] = newPost;
   
   res.json(newPost);
 });
