@@ -11,7 +11,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.get("/posts", async (req, res) => {
   try {
-    const posts = await prisma.post.findMany();
+    const posts = await prisma.post.findMany({ include: { author: true } });
     res.json(posts);
   } catch (e) {
     res.status(500).json({ message: 'Error' });
@@ -24,10 +24,23 @@ app.post("/posts", async (req, res) => {
       data: {
         title: req.body.title,
         body: req.body.body,
+        authorId: req.body.userId,
       },
     });
-    console.log(response);
     res.json(response);
+  } catch (e) {
+    res.status(500).json({ message: 'Error' });
+  }
+});
+
+app.get("/posts/:postId", async (req, res) => {
+  try {
+    const post = await prisma.post.findUnique({
+      where: {
+        id: req.params.postId,
+      },
+    });
+    res.json(post);
   } catch (e) {
     res.status(500).json({ message: 'Error' });
   }
@@ -37,7 +50,7 @@ app.put("/posts/:postId", async (req, res) => {
   try {
     const updatedPost = await prisma.post.update({
       where: {
-        id: +req.params.postId,
+        id: req.params.postId,
       },
       data: {
         title: req.body.title,
@@ -54,7 +67,7 @@ app.delete("/posts/:postId", async (req, res) => {
   try {
     const updatedPost = await prisma.post.delete({
       where: {
-        id: +req.params.postId,
+        id: req.params.postId,
       }
     });
     res.json(updatedPost);
@@ -63,141 +76,50 @@ app.delete("/posts/:postId", async (req, res) => {
   }
 });
 
-
-// collection of posts
-/*
-app.get("/posts", (req, res) => {
-  // map transforms an array like: [1, 2, 3] => [1, 4, 9]
-  // [1, 2, 3] => [{id: ...}, {id: ...}, { id: ...}]
-  // Object.values(posts); // [{}, {}, {}]; does something similar but with no
-  // order guaranteed
-  const postList = postIds.map((postId) => posts[postId]);
-  res.json(postList);
-});
-
-// RESTful: endpoints
-app.post("/posts", (req, res) => {
-  const newPost = createPost({
-    title: req.body.title,
-    body: req.body.body,
-  });
-
-  posts[newPost.id] = newPost;
-  
-  res.json(newPost);
-});
-
-app.put("/posts/:postId", (req, res) => {
-  const postId = req.params.postId;
-  if (posts[postId]) {
-    const updatedPost = updatePost(postId, req.body);
-    res.json(updatedPost);
-  } else {
-    res.status(404).json({ message: 'Eh, cabrón, este id no existe. Ahí te encargo para la próxima. Salu2 pelu2.' })
+app.post("/register", async (req, res) => {
+  try {
+    const user = await prisma.user.create({
+      data: {
+        username: req.body.username,
+        password: req.body.password,
+      },
+    });
+    res.json(user);
+  } catch (e) {
+    if (e.code === 'P2002') {
+      res.json({ message: 'El nombre de usuario ya existe' });
+    } else {
+      res.status(500).json({ message: 'Error' });
+    }
   }
 });
 
-app.delete("/posts/:postId", (req, res) => {
-  const postId = req.params.postId;
-  if (posts[postId]) {
-    delete posts[req.params.postId];
-    postIds = postIds.filter(id => id !== +req.params.postId);
-
-    res.json({ message: 'Post deleted successfully' });
-  } else {
-    res.status(404).json({ message: 'Eh, cabrón, este id no existe. Ahí te encargo para la próxima. Salu2 pelu2.' })
-  }
-}); */
-
-/*
-let idCount = 0;
-let postIds = [];
-
-function createPost(postData) {
-  let currentId = ++idCount;
-  postIds.push(currentId);
-
-  return {
-    id: currentId,
-    created_at: new Date(),
-    // spread operator
-    ...postData,
-  };
-}
-
-const firstPost = createPost({
-  title: 'first post',
-  body: 'this is the content',
-}); */
-
-/*
-
-const posts = {
-  // computed key ES6
-  [firstPost.id]: firstPost,
-};
-
-function updatePost(postId, postUpdated) {
-  posts[postId] = {
-    ...posts[postId],
-    ...postUpdated,
-  };
-
-  return posts[postId];
-}
-
-  Endpoints
-    Posts
-      [x] GET
-      [x] POST
-      [x] PUT
-      [x] DELETE
-
-// collection of posts
-app.get("/posts", (req, res) => {
-  // map transforms an array like: [1, 2, 3] => [1, 4, 9]
-  // [1, 2, 3] => [{id: ...}, {id: ...}, { id: ...}]
-  // Object.values(posts); // [{}, {}, {}]; does something similar but with no
-  // order guaranteed
-  const postList = postIds.map((postId) => posts[postId]);
-  res.json(postList);
-});
-
-// RESTful: endpoints
-app.post("/posts", (req, res) => {
-  const newPost = createPost({
-    title: req.body.title,
-    body: req.body.body,
-  });
-
-  posts[newPost.id] = newPost;
-  
-  res.json(newPost);
-});
-
-app.put("/posts/:postId", (req, res) => {
-  const postId = req.params.postId;
-  if (posts[postId]) {
-    const updatedPost = updatePost(postId, req.body);
-    res.json(updatedPost);
-  } else {
-    res.status(404).json({ message: 'Eh, cabrón, este id no existe. Ahí te encargo para la próxima. Salu2 pelu2.' })
+app.get("/users", async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({ include: { posts: true } });
+    res.json(users);
+  } catch (e) {
+    res.status(500).json({ message: 'Error' });
   }
 });
 
-app.delete("/posts/:postId", (req, res) => {
-  const postId = req.params.postId;
-  if (posts[postId]) {
-    delete posts[req.params.postId];
-    postIds = postIds.filter(id => id !== +req.params.postId);
-
-    res.json({ message: 'Post deleted successfully' });
-  } else {
-    res.status(404).json({ message: 'Eh, cabrón, este id no existe. Ahí te encargo para la próxima. Salu2 pelu2.' })
+app.post("/login", async (req, res) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        username: req.body.username,
+        password: req.body.password,
+      },
+    });
+    if (user) {
+      res.json({ message: 'El usuario se loggeo correctamente' });
+    } else {
+      res.status(404).json({ message: 'El usuario o la contraseña son incorrectas' });
+    }
+  } catch (e) {
+    res.status(500).json({ message: 'Error' });
   }
 });
-
-*/
 
 // start our server
 app.listen(port, () => {
