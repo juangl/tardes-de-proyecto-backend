@@ -2,8 +2,16 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const app = express();
 const port = 3000;
+const jsonwebtoken = require("jsonwebtoken");
+const expressJwt = require("express-jwt");
+const config = require("./config");
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
+
+const jwtCheck = expressJwt({
+  secret: config.secret,
+  algorithms: ["HS256"],
+});
 
 // express config
 app.use(express.json());
@@ -14,22 +22,22 @@ app.get("/posts", async (req, res) => {
     const posts = await prisma.post.findMany({ include: { author: true } });
     res.json(posts);
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 
-app.post("/posts", async (req, res) => {
+app.post("/posts", jwtCheck, async (req, res) => {
   try {
     const response = await prisma.post.create({
       data: {
         title: req.body.title,
         body: req.body.body,
-        authorId: req.body.userId,
+        authorId: req.user.id,
       },
     });
     res.json(response);
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 
@@ -42,7 +50,7 @@ app.get("/posts/:postId", async (req, res) => {
     });
     res.json(post);
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 
@@ -59,7 +67,7 @@ app.put("/posts/:postId", async (req, res) => {
     });
     res.json(updatedPost);
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 
@@ -68,11 +76,11 @@ app.delete("/posts/:postId", async (req, res) => {
     const updatedPost = await prisma.post.delete({
       where: {
         id: req.params.postId,
-      }
+      },
     });
     res.json(updatedPost);
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 
@@ -86,10 +94,10 @@ app.post("/register", async (req, res) => {
     });
     res.json(user);
   } catch (e) {
-    if (e.code === 'P2002') {
-      res.json({ message: 'El nombre de usuario ya existe' });
+    if (e.code === "P2002") {
+      res.json({ message: "El nombre de usuario ya existe" });
     } else {
-      res.status(500).json({ message: 'Error' });
+      res.status(500).json({ message: "Error" });
     }
   }
 });
@@ -99,9 +107,15 @@ app.get("/users", async (req, res) => {
     const users = await prisma.user.findMany({ include: { posts: true } });
     res.json(users);
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
+
+function createToken(username, id) {
+  return jsonwebtoken.sign({ username: username, id: id }, config.secret, {
+    expiresIn: 60 * 60 * 5,
+  });
+}
 
 app.post("/login", async (req, res) => {
   try {
@@ -112,12 +126,14 @@ app.post("/login", async (req, res) => {
       },
     });
     if (user) {
-      res.json({ message: 'El usuario se loggeo correctamente' });
+      res.json({ access_token: createToken(user.username, user.id) });
     } else {
-      res.status(404).json({ message: 'El usuario o la contraseña son incorrectas' });
+      res
+        .status(404)
+        .json({ message: "El usuario o la contraseña son incorrectas" });
     }
   } catch (e) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 

@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^2.20.1",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "express-jwt": "^6.0.0",
+    "jsonwebtoken": "^8.5.1"
   },
   "devDependencies": {
     "prisma": "^2.20.1"
