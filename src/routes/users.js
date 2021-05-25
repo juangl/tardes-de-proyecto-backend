@@ -45,6 +45,7 @@ router.post("/login", async (req, res) => {
         .json({ message: "El usuario o la contraseña son incorrectas" });
     }
   } catch (e) {
+    console.log('🚀 ~ router.post ~ e', e);
     res.status(500).json({ message: "Error" });
   }
 });
