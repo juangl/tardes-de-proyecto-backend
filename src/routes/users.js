@@ -10,7 +10,7 @@ router.post("/register", async (req, res) => {
         password: req.body.password,
       },
     });
-    res.json(user);
+    res.json({ access_token: createToken(user.username, user.id) });
   } catch (e) {
     if (e.code === "P2002") {
       res.json({ message: "El nombre de usuario ya existe" });
